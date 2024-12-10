@@ -1,0 +1,390 @@
+---
+title: 'Projekt R'
+author: "Julia Podsadna"
+date: "2024-12-10"
+output: html_document
+#runtime: shiny
+---
+## Uwaga
+Raport jest w pełni funkcjonalny tylko w formie włączanej za pomocą RStudio. Wynika to zastosowania shiny.
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+## Wykorzystane biblioteki
+```{r library}
+library(DT)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(kableExtra)
+library(shiny)
+library(corrplot)
+library(caret)
+library(randomForest)
+library(plotly)
+```
+
+## Wczytanie danych z pliku
+```{r load}
+batteries <- read.csv("D:/Studia/Zaawansowana Eksploracja Danych/Raporty/mp_batteries.csv")
+```
+
+## Czyszczenie danych
+```{r clean}
+batteries <- na.omit(batteries)
+```
+
+## Zapewnienie powtarzalności wyników przy każdym uruchomieniu raportu na tych samych danych
+Ustawione jest ziarno, które jest używane przy zastosowaniu funkcji z biblioteki randomForest. 
+``` {r}
+set.seed(17)
+```
+
+Zbiór danych jest dzielony na dwa podzbiory (dane numeryczne i kategoryczne), ponieważ niektóre funkcje mogą być używanbe tylko na określonym typie danych.
+``` {r}
+numeric_columns <- batteries %>% select(where(is.numeric))
+categorical_columns <- batteries %>% select(where(is.character))
+```
+
+## Podsumowanie rozmiaru zbioru i podstawowych statystyk
+<b>Nazwy kolumn:</b>
+```{r, echo=FALSE}
+colnames(batteries)
+```
+
+<b>Liczba wierszy:</b>
+```{r, echo=FALSE}
+nrow(batteries)
+```
+
+<b>Liczba kolumn:</b>
+```{r, echo=FALSE}
+ncol(batteries)
+```
+## Podsumowanie danych tabeli
+<b>Dane kategoryczne:</b>
+```{r, echo=FALSE}
+summary(categorical_columns)
+```
+
+<b>Dane numeryczne:</b>
+```{r, echo=FALSE}
+summary_numeric <- numeric_columns %>%
+  summarise_all(list(
+    Min = ~min(., na.rm = TRUE),
+    Max = ~max(., na.rm = TRUE),
+    Mean = ~mean(., na.rm = TRUE),
+    Median = ~median(., na.rm = TRUE),
+    SD = ~sd(., na.rm = TRUE),
+    NA_Count = ~sum(is.na(.))
+  )) %>%
+  pivot_longer(everything(), names_to = c("Variable", ".value"), names_sep = "_")
+
+summary_numeric %>%
+  kbl() %>%
+kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover", "condensed"))
+```
+## Pełna tabela
+```{r, echo=FALSE}
+datatable(batteries, options = list(scrollX = TRUE))
+```
+
+## Szczegółowa analiza wartości atrybutów
+Jeśli histogram się nie wyświetla, należy zmienić szerokość przedziału. <br>
+Dzięki histogramom można zobaczyć, jakie wartości dla danego parametru baterii występują najczęściej.
+```{r, echo=FALSE}
+ui <- fluidPage(
+  sidebarLayout(
+    sidebarPanel(
+      selectInput(
+        "plot_choice", 
+        "Wybierz zmienną:",
+        choices = names(numeric_columns)
+      ),
+      sliderInput(
+        "binwidth", 
+        "Wybierz szerokość przedziału:", 
+        min = 0.01, max = 1000, value = 10, step = 0.01
+      )
+    ),
+    mainPanel(
+      plotlyOutput("histogram_plot")
+    )
+  )
+)
+
+server <- function(input, output) {
+  output$histogram_plot <- renderPlotly({
+    p <- ggplot(batteries, aes_string(x = input$plot_choice)) +
+      geom_histogram(
+        fill = "skyblue",
+        binwidth = input$binwidth,
+        position = "identity"
+      ) +
+      labs(
+        title = paste("Histogram of", input$plot_choice),
+        x = input$plot_choice,
+        y = "Frequency"
+      ) +
+      theme_minimal()
+
+    ggplotly(p)
+  })
+}
+
+
+
+shinyApp(ui = ui, server = server)
+
+
+```
+
+## Korelacje między zmiennymi
+Jeśli histogram się nie wyświetla, należy zmienić szerokość przedziału. <br>
+Dzięki histogramom można zobaczyć, jakie wartości dla danego parametru baterii występują najczęściej z podziałem kolorystycznym ze względu na jon roboczy.
+```{r, echo=FALSE}
+
+ui <- fluidPage(
+  sidebarLayout(
+    sidebarPanel(
+      selectInput(
+        "plot_choice", 
+        "Wybierz zmienną:",
+        choices = names(numeric_columns)
+      ),
+      sliderInput(
+        "binwidth", 
+        "Wybierz szerokość przedziału:", 
+        min = 0.01, max = 1000, value = 10, step = 0.01
+      )
+    ),
+    mainPanel(
+      plotlyOutput("histogram_plot")
+    )
+  )
+)
+
+server <- function(input, output) {
+  output$histogram_plot <- renderPlotly({
+    p <- ggplot(batteries, aes_string(x = input$plot_choice, fill = "Working.Ion")) +
+      geom_histogram(
+        binwidth = input$binwidth,
+        alpha = 0.5,
+        position = "identity"
+      ) +
+      labs(
+        title = paste("Histogram of", input$plot_choice, "by Working Ion"),
+        x = input$plot_choice,
+        y = "Frequency"
+      ) +
+      theme_minimal()
+
+    ggplotly(p)
+  })
+}
+
+
+
+shinyApp(ui = ui, server = server)
+
+```
+
+## Macierz korelacji
+Macierz korelacji przedstawia jak bardzo parametry są powiązane ze sobą nawzajem.
+```{r, echo=FALSE}
+correlation_matrix <- cor(numeric_columns)
+corrplot(correlation_matrix, method = 'color', order = 'AOE', type = 'upper')
+```
+<br>
+<b>Gravimetric.Capacity</b> jest silnie skorelowana z <b>Volumetric.Capacity</b>. Im większa pojemność objętościowa, tym większa pojemność wagowa. <br>
+<b>Atomic.Fraction.Discharge</b> ma silną korelację z <b>Atomic.Fraction.Charge</b>, co sugeruje, że te dwie zmienne są ze sobą powiązane. <br>
+<b>Average.Voltage</b> i <b>Max.Delta.Volume</b> są lekko negatywnie skorelowane, co może wskazywać, że wyższe wartości napięcia średniego mogą być związane z mniejszymi wartościami zmiany objętości. <br>
+<b>Average.Voltage</b> i <b>Volumetric.Capacity</b> również mają negatywną korelację, co może sugerować, że wyższe napięcie średnie wiąże się z mniejszą pojemnością objętościową. <br>
+Wiele zmiennych, takich jak <b>Steps</b>, wykazuje słabe lub znikome korelacje z innymi parametrami. Na przykład <b>Stability.Charge</b> jest słabo skorelowane z <b>Steps</b> oraz z <b>Max.Delta.Volume</b>, co oznacza, że te zmienne mają ograniczony wpływ na siebie nawzajem. <br>
+<b>Gravimetric.Energy</b> jest bardzo silnie skorelowane z <b>Volumetric.Energy</b>, wskazując na to, że zmiany w energii wagowej są podobne do zmian w energii objętościowej. <br>
+<b>Stability.Discharge</b> i <b>Stability.Charge</b> mają wyraźną korelację. <br>
+
+## Podsumowanie najważniejszych trendów w badaniu materiałów do baterii
+<b>Najczęściej występujące jony robocze:</b>
+```{r, echo=FALSE}
+ion_counts <- table(batteries$Working.Ion)
+ion_counts_sorted <- sort(ion_counts, decreasing = TRUE)
+ion_data <- as.data.frame(ion_counts_sorted)
+colnames(ion_data) <- c("Working.Ion", "Count")
+
+ui <- fluidPage(
+  sidebarLayout(
+    sidebarPanel(
+      sliderInput("n_display", "Liczba wyświetlanych jonów roboczych:", 
+                  min = 3, max = 10, value = 5),
+      width = 3
+    ),
+    mainPanel(
+      plotlyOutput("interactive_plot"),
+      width = 9
+    )
+  )
+)
+
+server <- function(input, output, session) {
+  output$interactive_plot <- renderPlotly({
+    ion_data <- ion_data[order(-ion_data$Count), ]
+    plot <- ggplot(ion_data[1:input$n_display, ], aes(x = reorder(Working.Ion, Count), y = Count)) +
+      geom_bar(stat = "identity", fill = "darkorange") +
+      coord_flip() +
+      labs(
+        title = "Najczęściej występujące jony robocze",
+        x = "Jony robocze (Working.Ion)",
+        y = "Liczba wystąpień"
+      ) +
+      theme_minimal() +
+      theme(axis.text.y = element_text(size = 10))
+    
+    ggplotly(plot)
+  })
+}
+
+shinyApp(ui, server)
+
+```
+Najpopularniejszym jonem roboczym w bateriach jest <b>lit</b> i zdecydowanie przewyższa on popularnością pozostałe pierwiastki. Kolejnymi istostnymi pierwiastkami są <b>wapń</b>, <b>magnez</b>, <b>cynk</b> oraz <b>sód</b>. <br>
+Kolejnymi pierwiastkami, które występują zbliżoną ilość razy jest <b>potas</b>, <b>glin</b> i <b>itr</b>. <br>
+Najrzadziej występujące w zbiorze są <b>rubid</b> i <b>cez</b>. <br>
+
+
+<b>Lit (Li)</b> należy do metali alkalicznych, które charakteryzują się wyjątkową reaktywnością, szczególnie w kontakcie z wodą, oraz niską gęstością. Jest jednym z najlżejszych metali, co czyni go idealnym do zastosowań w bateriach, gdzie jego niewielki ciężar ma duże znaczenie. <br>
+
+<b>Wapń (Ca)</b> i <b>magnez (Mg)</b> są metalami ziem alkalicznych. Metale te są stosunkowo reaktywne, a ich związki są szeroko stosowane w różnych dziedzinach przemysłu, w tym w technologii akumulatorów. Magnez, podobnie jak lit, jest lekki, co sprzyja stosowaniu go w energetyce, szczególnie w kontekście akumulatorów. <br>
+
+<b>Cynk (Zn)</b> to metal przejściowy, który jest szeroko wykorzystywany w ogniwach galwanicznych oraz w procesach ochrony przed korozją. Jest mniej reaktywny niż metale alkaliczne, ale również posiada dobre właściwości przewodzące. <br>
+
+<b>Sód (Na)</b>, podobnie jak lit, należy do metali alkalicznych i jest stosunkowo reaktywny. Jest często wykorzystywany w ogniwach sodowych, które stanowią alternatywę dla akumulatorów litowych. <br>
+
+<b>Potas (K)</b>, również metal alkaliczny, jest bardziej reaktywny niż sód i lit, ale wciąż znajduje zastosowanie w badaniach nad nowymi rodzajami baterii. <br>
+
+<b>Glin (Al)</b> to metal przejściowy, który jest powszechnie stosowany w stopach metali, a także w technologii akumulatorów, zwłaszcza w kontekście konstrukcji obudów ogniw. <br>
+
+<b>Itr (Y)</b> należy do metali ziem rzadkich. Chociaż nie jest szeroko stosowany w technologii akumulatorów, jego unikalne właściwości, takie jak odporność na korozję, sprawiają, że znajduje zastosowanie w niektórych zaawansowanych materiałach. <br>
+
+<b>Rubid (Rb)</b> i <b>cez </b> to metale alkaliczne, które występują w przyrodzie w niewielkich ilościach. Mimo że są stosunkowo mało popularne w technologii baterii, ich właściwości chemiczne mogą znaleźć zastosowanie w bardzo specyficznych, innowacyjnych rozwiązaniach energetycznych. <br>
+
+Wszystkie te metale mają znaczenie w kontekście technologii bateryjnych, ponieważ ich właściwości elektrochemiczne umożliwiają magazynowanie energii w postaci jonów, co jest podstawą działania akumulatorów. <br><br>
+
+
+<b>Najczęściej występujące składy chemiczne baterii:</b>
+```{r, echo=FALSE}
+
+battery_counts <- table(batteries$Battery.Formula)
+battery_counts_sorted <- sort(battery_counts, decreasing = TRUE)
+battery_data <- as.data.frame(battery_counts_sorted)
+colnames(battery_data) <- c("Battery.Formula", "Count")
+
+ui <- fluidPage(
+  sidebarLayout(
+    sidebarPanel(
+      sliderInput("n_display", "Liczba wyświetlanych formuł:", 
+                  min = 3, max = 30, value = 10),
+      width = 3
+    ),
+    mainPanel(
+      plotlyOutput("interactive_plot"),
+      width = 9
+    )
+  )
+)
+
+server <- function(input, output, session) {
+  output$interactive_plot <- renderPlotly({
+    plot <- ggplot(battery_data[1:input$n_display, ], aes(x = reorder(Battery.Formula, Count), y = Count)) +
+      geom_bar(stat = "identity", fill = "steelblue") +
+      coord_flip() +
+      labs(
+        title = "Najczęściej występujące formuły baterii",
+        x = "Formuła baterii (Battery.Formula)",
+        y = "Liczba wystąpień"
+      ) +
+      theme_minimal() +
+      theme(axis.text.y = element_text(size = 10))
+    
+    ggplotly(plot)
+  })
+}
+
+shinyApp(ui, server)
+```
+Wiele z tych formuł to związki litowe, które są powszechnie stosowane w akumulatorach litowo-jonowych. Oprócz litowych związków, w zbiorze pojawiają się również formuły z innymi metalami, takimi jak magnez, cynk, wapń czy sód. <br>
+
+Formuły te obejmują różnorodne tlenki, fosforany, fluorowce i inne związki, które mają na celu poprawę właściwości elektrochemicznych materiałów stosowanych w akumulatorach, takich jak ich pojemność, stabilność oraz żywotność. Zawarte w zbiorze związki mogą mieć zastosowanie w rozwoju nowych technologii magazynowania energii, oferując potencjalne korzyści, takie jak wyższa efektywność czy obniżenie kosztów produkcji. <br><br>
+
+
+## Przewidywanie jonu roboczego na podstawie pozostałych parametrów (wykluczając formułę baterii i chemiczny skład)
+```{r, echo=FALSE}
+data <- batteries
+data$Working.Ion <- as.factor(data$Working.Ion)
+
+features <- data %>% select(-Battery.ID, -Battery.Formula, -Working.Ion, -Formula.Discharge)  
+target <- data$Working.Ion
+
+complete_data <- na.omit(data.frame(features, target))  
+
+train_index <- createDataPartition(complete_data$target, p = 0.8, list = FALSE)
+train_data <- complete_data[train_index, ]
+test_data <- complete_data[-train_index, ]
+
+rf_model <- randomForest(target ~ ., data = train_data, ntree = 100, importance = TRUE)
+
+predictions <- predict(rf_model, newdata = features)
+
+batteries_with_predictions <- batteries
+batteries_with_predictions <- cbind(Predicted.Working.Ion = as.character(predictions), batteries)
+
+test_predictions <- predict(rf_model, newdata = test_data)
+conf_matrix <- confusionMatrix(test_predictions, test_data$target)
+```
+
+<b>Macierz pomyłek oraz statystki predykcji:</b>
+```{r, echo = FALSE}
+print(conf_matrix)
+```
+
+<b>Macierz pomyłek</b> pokazuje liczbę poprawnie oraz błędnie zaklasyfikowanych przypadków dla każdej klasy. Na przykład model poprawnie sklasyfikował 10 przypadków jako Al oraz 53 jako Ca, ale popełnił również błędy, takie jak zaklasyfikowanie Li jako Ca lub Mg.<br>
+
+<b>Dokładność (Accuracy)</b>: 0,7232, co oznacza, że model poprawnie sklasyfikował około 72,32% przypadków. <br>
+<b>Przedział ufności 95% (95% CI)</b>: (0,6921, 0,7527), co oznacza, że z 95% pewnością dokładność mieści się w tym przedziale. <br>
+<b>Brak informacji o klasie (No Information Rate)</b>: 0,5629, co wskazuje, że większość przypadków należy do jednej klasy, a model bez używania żadnej informacji o cechach mógłby uzyskać dokładność na poziomie 56,29%. <br>
+<b>Wartość P dla dokładności większej niż NIR (P-Value [Acc > NIR])</b>: < 2.2e-16, co sugeruje, że wyniki modelu są statystycznie istotne, ponieważ dokładność modelu jest znacznie wyższa niż dokładność wynikająca z losowego zgadywania. <br>
+<b>Kappa</b>: 0,5575, co wskazuje na umiarkowaną zgodność między przewidywaniami modelu a rzeczywistymi klasami (0 oznacza brak zgody, a 1 oznacza pełną zgodność). <br>
+
+<b>Czułość (Sensitivity)</b>: Określa, jak skutecznie model wykrywa daną klasę. Na przykład, dla klasy Li wynosi 0,8975, co oznacza, że model bardzo dobrze identyfikuje przypadki tego pierwiastka, natomiast dla klasy Cs czułość wynosi 0, co oznacza, że model w ogóle nie sklasyfikował przypadków jako Cs. <br>
+<b>Specyficzność (Specificity)</b>: Mierzy, jak dobrze model rozróżnia przypadki należące do innych klas. Na przykład, dla klasy Al specyficzność wynosi 1, co oznacza, że model poprawnie klasyfikuje wszystkie przypadki jako nie-Al. <br>
+<b>Wartość predykcyjna pozytywna (Positive Predictive Value)</b>: Mówi, jaki odsetek przypadków, które model zaklasyfikował do danej klasy, rzeczywiście należy do tej klasy. Dla Li wynosi 0,8343, co oznacza, że w 83,43% przypadków, które model zaklasyfikował jako Li, były to rzeczywiście przypadki tego pierwiastka. <br>
+<b>Wartość predykcyjna negatywna (Negative Predictive Value)</b>: Mówi, jaki odsetek przypadków, które model zaklasyfikował jako nie należące do danej klasy, rzeczywiście do niej nie należy. Dla Li wynosi 0,8538, co sugeruje, że model skutecznie rozróżnia przypadki, które nie są Li. <br>
+<b>Prewalencja (Prevalence)</b>: Wskazuje, jak często dana klasa występuje w zbiorze danych. Na przykład, prewalencja dla klasy Li wynosi 0,5629, co oznacza, że 56,29% przypadków to Li. <br>
+<b>Wskaźnik wykrycia (Detection Rate)</b>: Określa, jaki odsetek przypadków danej klasy został poprawnie zaklasyfikowany przez model. Dla klasy Li wynosi 0,5052, co oznacza, że model poprawnie zidentyfikował 50,52% przypadków tej klasy spośród wszystkich jej rzeczywistych wystąpień. <br>
+<b>Wskaźnik częstości wykrycia (Detection Prevalence)</b>: Informuje, jaki odsetek wszystkich klasyfikacji dokonanych przez model przypisano do danej klasy. Dla klasy Li wynosi 0,6055, co oznacza, że 60,55% wszystkich klasyfikacji modelu zostało przypisanych do tej klasy. <br>
+<b>Zrównoważona dokładność (Balanced Accuracy)</b>: Jest średnią czułości (Sensitivity) i specyficzności (Specificity), co pozwala uwzględnić zarówno prawidłowe wykrycia, jak i uniknięcie fałszywych alarmów. Dla klasy Li wynosi 0,8340, co oznacza, że model osiągnął 83,4% zrównoważonej skuteczności w klasyfikacji tej klasy. <br><br>
+
+
+<b>Ważność zmiennych:</b> <br>
+```{r, echo = FALSE}
+varImpPlot(rf_model)
+datatable(varImpPlot(rf_model), options = list(scrollX = TRUE))
+```
+<b>MeanDecreaseAccuracy</b>: Ta miara pokazuje, jak duży wpływ na dokładność modelu ma zmiana wartości danej zmiennej. Im wyższa wartość, tym bardziej istotna jest dana zmienna w przewidywaniu klasy. Wysokie wartości wskazują, że usunięcie tej zmiennej z modelu spowoduje znaczące pogorszenie dokładności. <br>
+<b>MeanDecreaseGini</b>: To miara wpływu zmiennej na czystość podziału w drzewie decyzyjnym. Wysokie wartości wskazują, że zmienna pomaga w podziale danych na bardziej jednorodne klasy (niższa wartość Gini oznacza lepszy podział). <br>
+
+<b>Atomic.Fraction.Discharge</b> ma bardzo wysoką wartość w obu miarach, zarówno MeanDecreaseAccuracy, jak i MeanDecreaseGini, co oznacza, że jest to najważniejsza zmienna w modelu pod względem wpływu na dokładność oraz czystość podziału.<br>
+<b>Average.Voltage</b> zajmuje drugie miejsce pod względem MeanDecreaseAccuracy oraz trzecie pod względem MeanDecreaseGini, co wskazuje, że również ma duży wpływ na jakość modelu. <br>
+<b>Max.Delta.Volume</b> i <b>Volumetric.Capacity</b> mają wysokie wartości w MeanDecreaseAccuracy, oraz  w MeanDecreaseGini, co oznacza, że mają one istotny wpływ na model, szczególnie w kontekście podziałów w drzewie decyzyjnym. <br>
+<b>Formula.Charge</b> i <b>Gravimetric.Capacity</b> również mają istotny wpływ na model, ale ich wartości są nieco niższe niż te dla wyżej wymienionych zmiennych. <br>
+<b>Stability.Charge</b> i <b>Stability.Discharge</b> mają nieco mniejszy wpływ na dokładność i czystość podziału w porównaniu do wymienionych wcześniej, ale wciąż odgrywają rolę w przewidywaniu. <br>
+<b>Atomic.Fraction.Charge</b> nie jest najistotniejsza, ale ma znaczący wpływ na dokładność modelu, szczególnie jeśli chodzi o czystość podziałów. <br>
+<b>Steps</b> i <b>Max.Voltage.Step</b> mają najmniejszy wpływ na model, z niższymi wartościami w obu miarach. Szczególnie zmienna Steps ma bardzo niską wartość MeanDecreaseAccuracy, wskazując na jej mniejszą rolę w modelu. <br><br>
+
+<b>Tabela z dopisanym przewidywanym jonem roboczym:</b>
+```{r, echo = FALSE}
+datatable(batteries_with_predictions, options = list(scrollX = TRUE))
+```
+
+
