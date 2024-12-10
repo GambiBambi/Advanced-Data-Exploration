@@ -1,5 +1,5 @@
 # Analiza parametrów baterii  
-Projekt realizowany w ramach przedmiotu **Zaawansowana eksploracja danych** na kierunku **Informatyka** (specjalizacja: Inżynieria Oprogramowania).  
+Projekt realizowany w ramach przedmiotu **Zaawansowana eksploracja danych** na kierunku **Informatyka** (specjalizacja: Technoloogie Przetwarzania Danych).  
 
 ## Opis projektu  
 Celem projektu jest analiza parametrów technicznych baterii na podstawie zbioru danych *batteries* udostępnionego przez prowadzącego.  
@@ -32,3 +32,6 @@ Do uruchomienia projektu wymagane jest środowisko **RStudio** z następującymi
 
 **Uwaga**: Plik `projektR.html` można otworzyć w przeglądarce, aby obejrzeć wyniki analizy w formie statycznej, jednak interaktywność zapewniana przez Shiny będzie niedostępna.
 Link do otwarcia formy statycznej pliku: [projektR.html](https://example.com).
+
+## Autor
+Projekt zrealizowany przez: Julia Podsadna
