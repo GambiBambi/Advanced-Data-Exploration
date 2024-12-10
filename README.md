@@ -31,7 +31,7 @@ Do uruchomienia projektu wymagane jest środowisko **RStudio** z następującymi
 - `plotly`  
 
 **Uwaga**: Plik `projektR.html` można otworzyć w przeglądarce, aby obejrzeć wyniki analizy w formie statycznej, jednak interaktywność zapewniana przez Shiny będzie niedostępna.
-Link do otwarcia formy statycznej pliku: [projektR.html]([https://gambibambi.github.io/Zaawansowana-Eksploracja-Danych/ProjektR.html]).
+Link do otwarcia formy statycznej pliku: [projektR.html](https://gambibambi.github.io/Zaawansowana-Eksploracja-Danych/ProjektR.html).
 
 ## Autor
 Projekt zrealizowany przez: Julia Podsadna
