@@ -14,8 +14,8 @@ Analiza obejmuje:
   Plik źródłowy w R Markdown zawierający kod analizy i aplikacji Shiny.  
 - `projektR.html`  
   Plik statyczny HTML prezentujący wyniki analizy (bez funkcjonalności interaktywnych).  
-- `data/`  
-  Katalog z danymi wejściowymi (*mp_batteries.csv*).  
+- `mp_batteries.csv`  
+  Plik z danymi wejściowymi.  
 
 ## Wymagania  
 Do uruchomienia projektu wymagane jest środowisko **RStudio** z następującymi pakietami R:  
