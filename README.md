@@ -1,6 +1,8 @@
 English below
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 
-<br>
+
+
+
 # Analiza parametrów baterii  
 Projekt realizowany w ramach przedmiotu **Zaawansowana eksploracja danych** na kierunku **Informatyka** (specjalizacja: Technoloogie Przetwarzania Danych).  
 
@@ -38,7 +40,8 @@ Link do otwarcia formy statycznej pliku: [projektR.html](https://gambibambi.gith
 
 ## Autor
 Projekt zrealizowany przez: Julia Podsadna
-<br>
+
+
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 # Battery Parameters Analysis
