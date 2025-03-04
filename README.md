@@ -35,3 +35,44 @@ Link do otwarcia formy statycznej pliku: [projektR.html](https://gambibambi.gith
 
 ## Autor
 Projekt zrealizowany przez: Julia Podsadna
+
+
+
+# Battery Parameters Analysis
+
+This project is carried out as part of the **Advanced Data Exploration** course in the **Computer Science** program (specialization: Data Processing Technologies).  
+
+## Project Description  
+The goal of the project is to analyze the technical parameters of batteries based on the *batteries* dataset provided by the instructor.  
+The analysis includes:  
+- Data preprocessing  
+- Data exploration and visualization  
+- Pattern and relationship identification  
+- Interactive presentation of results using Shiny  
+
+## Project Structure  
+- `projektR.Rmd`  
+  R Markdown source file containing the analysis code and Shiny application.  
+- `projektR.html`  
+  Static HTML file presenting the analysis results (without interactive functionality).  
+- `mp_batteries.csv`  
+  Input data file.  
+
+## Requirements  
+To run the project, an **RStudio** environment is required with the following R packages installed:  
+- `DT`  
+- `ggplot2`  
+- `dplyr`  
+- `tidyr`  
+- `kableExtra`  
+- `shiny`  
+- `corrplot`  
+- `caret`  
+- `randomForest`  
+- `plotly`  
+
+**Note**: The `projektR.html` file can be opened in a web browser to view the analysis results in a static form. However, interactivity provided by Shiny will not be available.  
+Link to open the static file: [projektR.html](https://gambibambi.github.io/Zaawansowana-Eksploracja-Danych/ProjektR.html).  
+
+## Author  
+Project developed by: **Julia Podsadna**
