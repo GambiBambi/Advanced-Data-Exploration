@@ -36,7 +36,7 @@ Link do otwarcia formy statycznej pliku: [projektR.html](https://gambibambi.gith
 ## Autor
 Projekt zrealizowany przez: Julia Podsadna
 
-
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 # Battery Parameters Analysis
 
